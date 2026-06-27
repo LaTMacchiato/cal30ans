@@ -3,7 +3,9 @@
     {
       "id": "p_1782570853260_9g74s",
       "name": "Toto le normand",
-      "availabilities": {}
+      "availabilities": {
+        "2026-08-14": "available"
+      }
     }
   ]
 }
