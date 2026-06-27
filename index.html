@@ -1,1 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Les 30 Ans - Calendrier de Disponibilités</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for clean modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation / Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                <div class="logo-text">
+                    <h1>Les 30 Ans</h1>
+                    <span class="sub-logo">Organisation du Week-end / Journée</span>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <div id="sync-status" class="sync-status">
+                    <i class="fa-solid fa-cloud-arrow-up loading-spinner"></i>
+                    <span>Synchronisation...</span>
+                </div>
+                
+                <div id="active-user-widget" class="active-user-widget hidden">
+                    <span class="user-avatar" id="user-avatar">?</span>
+                    <div class="user-info">
+                        <span class="user-label">Saisie en cours</span>
+                        <span class="user-name" id="active-user-name">Visiteur</span>
+                    </div>
+                    <button id="change-profile-btn" class="btn btn-secondary-outline" title="Changer de profil ou modifier un autre nom">
+                        <i class="fa-solid fa-user-pen"></i> Changer
+                    </button>
+                </div>
+            </div>
+        </header>
 
+        <!-- Main Dashboard Layout -->
+        <main class="app-main">
+            <!-- Sidebar for Controls and Analytics -->
+            <aside class="app-sidebar">
+                <!-- Profile Card -->
+                <div class="card card-profile">
+                    <h2><i class="fa-solid fa-users"></i> Participants</h2>
+                    <p class="section-desc">Liste des copains ayant partagé leurs disponibilités :</p>
+                    <div id="participants-list" class="participants-list">
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                    </div>
+                </div>
+
+                <!-- Legend & Selection Help -->
+                <div class="card card-legend">
+                    <h2><i class="fa-solid fa-circle-info"></i> Comment faire ?</h2>
+                    <p class="section-desc">Sélectionnez votre profil, puis cliquez sur les jours du calendrier pour changer votre état :</p>
+                    
+                    <div class="legend-items">
+                        <div class="legend-item" data-status="available">
+                            <span class="color-badge status-available"></span>
+                            <span class="legend-label">Disponible</span>
+                        </div>
+                        <div class="legend-item" data-status="maybe">
+                            <span class="color-badge status-maybe"></span>
+                            <span class="legend-label">Peut-être</span>
+                        </div>
+                        <div class="legend-item" data-status="unavailable">
+                            <span class="color-badge status-unavailable"></span>
+                            <span class="legend-label">Indisponible</span>
+                        </div>
+                        <div class="legend-item" data-status="none">
+                            <span class="color-badge status-none"></span>
+                            <span class="legend-label">Non renseigné</span>
+                        </div>
+                    </div>
+
+                    <div class="info-tip">
+                        <i class="fa-solid fa-lightbulb"></i>
+                        <span>Astuce : survolez un jour du calendrier pour voir le détail des réponses des copains.</span>
+                    </div>
+                </div>
+
+                <!-- Heatmap Summary / Best Dates -->
+                <div class="card card-analytics">
+                    <h2><i class="fa-solid fa-star text-gold"></i> Meilleures Dates</h2>
+                    <p class="section-desc">Les jours réunissant le plus grand nombre de participants :</p>
+                    <div id="best-dates-container" class="best-dates-list">
+                        <!-- Will be populated dynamically -->
+                        <p class="empty-msg">Renseignez vos disponibilités pour calculer les meilleurs jours !</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Calendar Area -->
+            <section class="calendar-section">
+                <div class="calendar-grid-header">
+                    <h2><i class="fa-solid fa-calendar-week"></i> Calendrier (Août - Novembre 2026)</h2>
+                    <div class="calendar-actions">
+                        <button id="clear-my-dates" class="btn btn-danger-outline hidden">
+                            <i class="fa-solid fa-trash-can"></i> Réinitialiser mes dates
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Months Grid container -->
+                <div class="months-grid" id="months-grid">
+                    <!-- Will be populated by JS -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Login / Welcome Modal Overlay -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <div class="modal-logo">
+                    <i class="fa-solid fa-cake-candles"></i>
+                </div>
+                <h2>Bienvenue sur le planning des 30 ans !</h2>
+                <p>Pour consulter ou renseigner les disponibilités, veuillez vous identifier.</p>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Option A: Select existing profile -->
+                <div class="input-group" id="existing-profiles-group">
+                    <label for="profile-select"><i class="fa-solid fa-user-check"></i> Modifier un profil existant :</label>
+                    <div class="select-wrapper">
+                        <select id="profile-select" class="form-control">
+                            <option value="" disabled selected>-- Choisissez votre prénom --</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down select-icon"></i>
+                    </div>
+                    <button id="login-existing-btn" class="btn btn-primary btn-block" disabled>
+                        <i class="fa-solid fa-right-to-bracket"></i> Accéder et modifier mon profil
+                    </button>
+                </div>
+
+                <div class="modal-divider">
+                    <span>OU</span>
+                </div>
+
+                <!-- Option B: Create new profile -->
+                <div class="input-group">
+                    <label for="new-profile-name"><i class="fa-solid fa-user-plus"></i> Créer un nouveau profil :</label>
+                    <input type="text" id="new-profile-name" class="form-control" placeholder="Entrez votre prénom (ex: Julien)" maxlength="20" autocomplete="off">
+                    <button id="login-new-btn" class="btn btn-success btn-block" disabled>
+                        <i class="fa-solid fa-user-plus"></i> Rejoindre le planning
+                    </button>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button id="view-only-btn" class="btn btn-secondary-outline btn-block">
+                    <i class="fa-solid fa-eye"></i> Consulter uniquement (mode lecture seule)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Hover Details Container (Floating) -->
+    <div id="floating-tooltip" class="floating-tooltip hidden">
+        <div class="tooltip-header" id="tooltip-date">25 Août 2026</div>
+        <div class="tooltip-section">
+            <div class="tooltip-section-title"><i class="fa-solid fa-circle-check text-green"></i> Dispos (<span id="tooltip-available-count">0</span>)</div>
+            <div class="tooltip-list" id="tooltip-available-list">-</div>
+        </div>
+        <div class="tooltip-section">
+            <div class="tooltip-section-title"><i class="fa-solid fa-circle-question text-yellow"></i> Peut-être (<span id="tooltip-maybe-count">0</span>)</div>
+            <div class="tooltip-list" id="tooltip-maybe-list">-</div>
+        </div>
+        <div class="tooltip-section">
+            <div class="tooltip-section-title"><i class="fa-solid fa-circle-xmark text-red"></i> Indispos (<span id="tooltip-unavailable-count">0</span>)</div>
+            <div class="tooltip-list" id="tooltip-unavailable-list">-</div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
