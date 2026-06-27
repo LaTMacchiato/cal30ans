@@ -11,7 +11,9 @@
     {
       "id": "p_1782570640871_omvub",
       "name": "Test",
-      "availabilities": {}
+      "availabilities": {
+        "2026-08-13": "available"
+      }
     }
   ]
 }
