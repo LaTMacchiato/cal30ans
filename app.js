@@ -883,7 +883,7 @@ async function triggerDataSave() {
         renderApp();
     } catch (error) {
         console.error('Save Error:', error);
-        updateSyncStatus('error', 'Erreur d\'enregistrement');
+        updateSyncStatus('error', `Erreur: ${error.message}`);
     }
 }
 
