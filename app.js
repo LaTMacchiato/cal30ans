@@ -1,5 +1,5 @@
 // API & Data configuration
-const API_URL = 'https://extendsclass.com/api/json-storage/bin/cbdfbdc';
+const API_URL = 'https://json.extendsclass.com/bin/cbdfbdc';
 
 // 4 Months Config for 2026 (JavaScript Date month index: 7 = August, 8 = Sept, 9 = Oct, 10 = Nov)
 const MONTHS_CONFIG = [
