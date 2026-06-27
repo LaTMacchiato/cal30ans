@@ -48,14 +48,14 @@
         "2026-09-18": "available",
         "2026-09-19": "maybe",
         "2026-09-20": "available",
-        "2026-09-26": "available",
-        "2026-09-27": "available",
-        "2026-09-25": "available",
+        "2026-09-27": "unavailable",
         "2026-10-28": "unavailable",
         "2026-10-29": "unavailable",
         "2026-10-30": "unavailable",
         "2026-10-31": "unavailable",
-        "2026-09-24": "unavailable"
+        "2026-09-24": "unavailable",
+        "2026-09-25": "unavailable",
+        "2026-09-26": "unavailable"
       }
     },
     {
