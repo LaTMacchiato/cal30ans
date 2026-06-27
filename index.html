@@ -40,6 +40,10 @@
                         <i class="fa-solid fa-user-pen"></i> Changer
                     </button>
                 </div>
+
+                <button id="settings-btn" class="btn btn-secondary-outline" title="Configuration de l'accès GitHub">
+                    <i class="fa-solid fa-gear"></i> Réglages
+                </button>
             </div>
         </header>
 
@@ -160,6 +164,40 @@
             <div class="modal-footer">
                 <button id="view-only-btn" class="btn btn-secondary-outline btn-block">
                     <i class="fa-solid fa-eye"></i> Consulter uniquement (mode lecture seule)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <div class="modal-logo">
+                    <i class="fa-brands fa-github"></i>
+                </div>
+                <h2>Configuration de l'accès GitHub</h2>
+                <p>Le site sauvegarde les disponibilités dans votre dépôt GitHub.</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="github-token-input"><i class="fa-solid fa-key"></i> Token d'accès GitHub (PAT) :</label>
+                    <input type="password" id="github-token-input" class="form-control" placeholder="github_pat_...">
+                    <span class="help-text">Ce jeton doit avoir les permissions d'écriture pour le dépôt <strong><span id="settings-repo-name">latmacchiato/cal30ans</span></strong>.</span>
+                </div>
+                <div class="info-tip">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Comment obtenir ce token ? <br>1. Allez sur GitHub > Settings > Developer Settings > Personal Access Tokens > Fine-grained tokens.<br>2. Générez un jeton avec accès en écriture sur le dépôt de votre calendrier.<br>3. Partagez-le avec vos amis pour qu'ils puissent s'identifier et écrire !</span>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button id="save-settings-btn" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-floppy-disk"></i> Enregistrer les réglages
+                </button>
+                <button id="close-settings-btn" class="btn btn-secondary-outline btn-block">
+                    <i class="fa-solid fa-xmark"></i> Annuler
                 </button>
             </div>
         </div>

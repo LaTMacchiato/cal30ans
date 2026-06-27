@@ -19,7 +19,7 @@ L'application affiche en simultané la période de **Août 2026 à Novembre 2026
 
 L'application utilise l'API de stockage de **[ExtendsClass](https://extendsclass.com/)** pour sauvegarder et charger le planning de groupe sous format JSON. 
 
-- **Endpoint de données** : `https://extendsclass.com/api/json-storage/bin/cbdfbdc`
+- **Endpoint de données** : `https://json.extendsclass.com/bin/cbdfbdc`
 - **Sauvegarde locale** : En cas de perte de connexion, une copie des données est sauvegardée dans le `localStorage` de votre navigateur.
 
 ---

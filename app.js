@@ -1,7 +1,10 @@
-// API & Data configuration
-const API_URL = 'https://json.extendsclass.com/bin/cbdfbdc';
+// Dynamic GitHub Repository Resolution from URL
+// e.g., https://latmacchiato.github.io/cal30ans/ -> owner: latmacchiato, repo: cal30ans
+const repoDetails = getRepoDetails();
+const REPO_OWNER = repoDetails.owner;
+const REPO_NAME = repoDetails.repo;
 
-// 4 Months Config for 2026 (JavaScript Date month index: 7 = August, 8 = Sept, 9 = Oct, 10 = Nov)
+// JavaScript Date month index: 7 = August, 8 = Sept, 9 = Oct, 10 = Nov
 const MONTHS_CONFIG = [
     { month: 7, year: 2026, name: 'Août' },
     { month: 8, year: 2026, name: 'Septembre' },
@@ -13,6 +16,8 @@ const MONTHS_CONFIG = [
 let appData = { participants: [] };
 let activeParticipantId = null;
 let saveDebounceTimeout = null;
+let githubToken = localStorage.getItem('cal30ans_github_token') || '';
+let fileSha = null; // Store latest data.json SHA to avoid commit conflicts
 
 // DOM Elements
 const syncStatusEl = document.getElementById('sync-status');
@@ -32,12 +37,43 @@ const bestDatesContainerEl = document.getElementById('best-dates-container');
 const monthsGridEl = document.getElementById('months-grid');
 const floatingTooltipEl = document.getElementById('floating-tooltip');
 
+// Settings Elements
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModalEl = document.getElementById('settings-modal');
+const githubTokenInput = document.getElementById('github-token-input');
+const settingsRepoName = document.getElementById('settings-repo-name');
+const saveSettingsBtn = document.getElementById('save-settings-btn');
+const closeSettingsBtn = document.getElementById('close-settings-btn');
+
 // Initial Setup
 document.addEventListener('DOMContentLoaded', async () => {
+    // Populate repo name in settings modal
+    if (settingsRepoName) {
+        settingsRepoName.textContent = `${REPO_OWNER}/${REPO_NAME}`;
+    }
+    if (githubTokenInput) {
+        githubTokenInput.value = githubToken;
+    }
+
     setupEventListeners();
     await fetchInitialData();
     checkSavedSession();
 });
+
+// Helper: Determine repo details from URL
+function getRepoDetails() {
+    const hostname = window.location.hostname;
+    const pathname = window.location.pathname;
+    
+    if (hostname.endsWith('.github.io')) {
+        const owner = hostname.split('.')[0];
+        const repo = pathname.split('/').filter(Boolean)[0] || '';
+        return { owner, repo };
+    }
+    
+    // Fallback for local testing (matches user's GitHub setup)
+    return { owner: 'latmacchiato', repo: 'cal30ans' };
+}
 
 // Setup DOM Event Listeners
 function setupEventListeners() {
@@ -77,6 +113,29 @@ function setupEventListeners() {
 
     clearMyDatesBtn.addEventListener('click', handleClearMyDates);
 
+    // Settings Modal triggers
+    settingsBtn.addEventListener('click', () => {
+        settingsModalEl.classList.remove('hidden');
+        if (githubTokenInput) {
+            githubTokenInput.value = githubToken;
+        }
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModalEl.classList.add('hidden');
+    });
+
+    saveSettingsBtn.addEventListener('click', async () => {
+        const tokenVal = githubTokenInput.value.trim();
+        githubToken = tokenVal;
+        localStorage.setItem('cal30ans_github_token', tokenVal);
+        settingsModalEl.classList.add('hidden');
+        
+        // Reload data with new credentials
+        await fetchInitialData();
+        renderApp();
+    });
+
     // Tooltip floating mouse movements
     document.addEventListener('mousemove', (e) => {
         if (!floatingTooltipEl.classList.contains('hidden')) {
@@ -99,24 +158,83 @@ function setupEventListeners() {
     });
 }
 
-// Fetch data from ExtendsClass
+// Fetch data from GitHub API (or fallback to static data.json)
 async function fetchInitialData() {
     updateSyncStatus('loading', 'Chargement...');
+    
+    // Scenario A: We have a GitHub token -> Fetch from GitHub API (real-time)
+    if (githubToken) {
+        try {
+            const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`, {
+                headers: {
+                    'Authorization': `Bearer ${githubToken}`,
+                    'Accept': 'application/vnd.github+json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+
+            if (response.status === 401) {
+                // Token is invalid, reset it
+                githubToken = '';
+                localStorage.removeItem('cal30ans_github_token');
+                alert("Votre Jeton GitHub (Token) semble invalide ou expiré. Il a été réinitialisé.");
+                throw new Error("401 Unauthorized");
+            }
+
+            if (response.status === 404) {
+                // data.json does not exist yet in the repo
+                appData = { participants: [] };
+                fileSha = null;
+                updateSyncStatus('saved', 'À jour (Fichier vide)');
+                return;
+            }
+
+            if (!response.ok) throw new Error('Erreur API GitHub');
+
+            const contentData = await response.json();
+            fileSha = contentData.sha;
+            
+            // Base64 decode content (ignoring whitespace/newlines)
+            const decodedContent = atob(contentData.content.replace(/\s/g, ''));
+            const parsed = JSON.parse(decodeURIComponent(escape(decodedContent)));
+            
+            if (parsed && Array.isArray(parsed.participants)) {
+                appData = parsed;
+            } else {
+                appData = { participants: [] };
+            }
+            
+            updateSyncStatus('saved', 'À jour (GitHub)');
+            return;
+        } catch (error) {
+            console.error('GitHub API load failed:', error);
+        }
+    }
+
+    // Scenario B: No token OR Scenario A failed -> Fetch from relative data.json (compiled static build)
     try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('Erreur de chargement');
-        appData = await response.json();
+        const response = await fetch('data.json', { cache: 'no-store' });
+        if (response.status === 404) {
+            // No data.json deployed yet
+            appData = { participants: [] };
+            updateSyncStatus('saved', 'Lecture seule (Sans données)');
+            return;
+        }
+
+        if (!response.ok) throw new Error('Erreur HTTP statique');
         
-        // Ensure participants structure exists
-        if (!appData || !Array.isArray(appData.participants)) {
+        const parsed = await response.json();
+        if (parsed && Array.isArray(parsed.participants)) {
+            appData = parsed;
+        } else {
             appData = { participants: [] };
         }
-        
-        updateSyncStatus('saved', 'À jour');
+        updateSyncStatus('saved', 'À jour (Statique)');
     } catch (error) {
-        console.error('Fetch Error:', error);
+        console.error('Static data load failed:', error);
         updateSyncStatus('error', 'Erreur de synchro');
-        // Fallback to local storage if API fails completely
+        
+        // Fallback to local storage backup
         const localBackup = localStorage.getItem('cal30ans_backup_data');
         if (localBackup) {
             appData = JSON.parse(localBackup);
@@ -181,8 +299,6 @@ function setActiveParticipant(id) {
     }
     
     loginModalEl.classList.add('hidden');
-    
-    // Render/refresh calendar and dashboards
     renderApp();
 }
 
@@ -191,7 +307,7 @@ async function handleCreateNewParticipant() {
     const name = newProfileNameEl.value.trim();
     if (!name) return;
 
-    // Check if name already exists (case insensitive)
+    // Check if name already exists
     const exists = appData.participants.some(p => p.name.toLowerCase() === name.toLowerCase());
     if (exists) {
         alert(`Le prénom "${name}" existe déjà. Veuillez choisir un autre prénom ou sélectionner le profil existant.`);
@@ -268,7 +384,6 @@ function renderParticipantsList() {
             </div>
         `;
         
-        // Clicking a participant item in sidebar allows switching to their profile (with verification)
         item.addEventListener('click', () => {
             if (p.id !== activeParticipantId) {
                 if (confirm(`Voulez-vous passer sur le profil de ${p.name} pour le modifier ?`)) {
@@ -312,8 +427,6 @@ function renderCalendars() {
         daysGrid.className = 'days-grid';
 
         // Calculate offset for the 1st of the month
-        // (JS Date getDay(): Sunday=0, Monday=1, ..., Saturday=6)
-        // We want Monday=0, ..., Sunday=6
         let firstDay = new Date(cfg.year, cfg.month, 1).getDay();
         let offset = firstDay === 0 ? 6 : firstDay - 1;
 
@@ -332,7 +445,6 @@ function renderCalendars() {
             const dayCell = document.createElement('div');
             dayCell.className = 'day-cell';
             
-            // Format YYYY-MM-DD string
             const monthStr = String(cfg.month + 1).padStart(2, '0');
             const dayStr = String(day).padStart(2, '0');
             const dateKey = `${cfg.year}-${monthStr}-${dayStr}`;
@@ -347,7 +459,7 @@ function renderCalendars() {
 
             // Highlight weekends
             const dayOfWeek = new Date(cfg.year, cfg.month, day).getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sun or Sat
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             if (isWeekend) {
                 dayCell.classList.add('weekend');
             }
@@ -427,13 +539,11 @@ function handleDayClick(dateKey) {
     // Dynamic local DOM update for immediate response feeling
     const cell = document.querySelector(`.day-cell[data-date="${dateKey}"]`);
     if (cell) {
-        // Clear old state classes
         cell.classList.remove('user-status-available', 'user-status-maybe', 'user-status-unavailable');
         if (nextStatus !== 'none') {
             cell.classList.add(`user-status-${nextStatus}`);
         }
         
-        // Re-render dots inside this day cell
         const indicator = cell.querySelector('.heatmap-indicator');
         indicator.innerHTML = '';
         appData.participants.forEach(p => {
@@ -447,11 +557,8 @@ function handleDayClick(dateKey) {
         });
     }
 
-    // Refresh other elements (sidebar lists, best dates)
     renderParticipantsList();
     renderBestDates();
-
-    // Trigger saving queue
     queueDataSave();
 }
 
@@ -501,7 +608,6 @@ function renderBestDates() {
         return;
     }
 
-    // Count availability for all dates in our range
     const scores = {};
 
     MONTHS_CONFIG.forEach(cfg => {
@@ -520,7 +626,6 @@ function renderBestDates() {
                 else if (status === 'maybe') maybeScore++;
             });
 
-            // Score calculation: 1.0 point for Available, 0.5 points for Maybe
             const totalScore = yesScore + (maybeScore * 0.5);
             
             if (totalScore > 0) {
@@ -537,13 +642,11 @@ function renderBestDates() {
         }
     });
 
-    // Sort dates by totalScore (descending), then yesCount (descending)
     const sortedDates = Object.values(scores).sort((a, b) => {
         if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
         return b.yesCount - a.yesCount;
     });
 
-    // Take top 5 best dates
     const topDates = sortedDates.slice(0, 5);
 
     if (topDates.length === 0) {
@@ -553,14 +656,12 @@ function renderBestDates() {
 
     topDates.forEach(d => {
         const dateObj = new Date(d.dateKey);
-        // Day of week in French
         const dayOfWeekStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'short' });
         const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
 
         const item = document.createElement('div');
         item.className = 'best-date-item';
         
-        // Highlight weekends in best dates
         const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
         const weekendBadge = isWeekend ? ' <span style="color:#d97706; font-size:0.75rem; font-weight:600;">(W-E)</span>' : '';
 
@@ -576,7 +677,6 @@ function renderBestDates() {
             </div>
         `;
 
-        // Interactive hover to highlight day in calendar
         item.addEventListener('mouseenter', () => {
             const cell = document.querySelector(`.day-cell[data-date="${d.dateKey}"]`);
             if (cell) {
@@ -600,11 +700,11 @@ function renderBestDates() {
     });
 }
 
-// Queue save (debounce to avoid overloading the free API)
+// Queue save (debounce to avoid overloading the GitHub API)
 function queueDataSave() {
     updateSyncStatus('loading', 'Sauvegarde en cours...');
     
-    // Backup locally in localStorage just in case
+    // Backup locally in localStorage
     localStorage.setItem('cal30ans_backup_data', JSON.stringify(appData));
     
     if (saveDebounceTimeout) {
@@ -613,26 +713,131 @@ function queueDataSave() {
     
     saveDebounceTimeout = setTimeout(async () => {
         await triggerDataSave();
-    }, 1000); // 1 second debounce
+    }, 1000);
 }
 
-// Send data to server
+// Send data to GitHub API (handles merge conflicts automatically)
 async function triggerDataSave() {
+    if (!githubToken) {
+        updateSyncStatus('error', 'Token d\'accès requis');
+        
+        // Open the settings modal to let the user insert the token
+        settingsModalEl.classList.remove('hidden');
+        alert("Pour sauvegarder vos modifications sur GitHub, veuillez entrer un Token d'accès (PAT) dans les réglages.");
+        return;
+    }
+
     try {
-        const response = await fetch(API_URL, {
-            method: 'PUT',
+        // 1. Fetch latest state of data.json from GitHub to get current SHA and remote updates
+        const getResponse = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`, {
             headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(appData)
+                'Authorization': `Bearer ${githubToken}`,
+                'Accept': 'application/vnd.github+json',
+                'Cache-Control': 'no-cache'
+            }
         });
 
-        if (!response.ok) throw new Error('Sauvegarde échouée');
-        updateSyncStatus('saved', 'Modifications enregistrées !');
+        let serverData = { participants: [] };
+        
+        if (getResponse.ok) {
+            const contentData = await getResponse.json();
+            fileSha = contentData.sha;
+            
+            const decodedContent = atob(contentData.content.replace(/\s/g, ''));
+            const parsed = JSON.parse(decodeURIComponent(escape(decodedContent)));
+            if (parsed && Array.isArray(parsed.participants)) {
+                serverData = parsed;
+            }
+        } else if (getResponse.status === 404) {
+            // File does not exist yet, we will create it (fileSha stays null)
+            fileSha = null;
+        } else if (getResponse.status === 401) {
+            githubToken = '';
+            localStorage.removeItem('cal30ans_github_token');
+            settingsModalEl.classList.remove('hidden');
+            throw new Error("401 Jeton expiré");
+        } else {
+            throw new Error(`Erreur récupération SHA: ${getResponse.status}`);
+        }
+
+        // 2. Merge local changes with remote changes
+        appData = mergeDataLists(serverData, appData);
+
+        // 3. Convert merged data to UTF-8 compatible base64
+        const jsonStr = JSON.stringify(appData, null, 2);
+        const base64Content = btoa(unescape(encodeURIComponent(jsonStr)));
+
+        // 4. Send PUT request to GitHub API to save the merged JSON file
+        const body = {
+            message: `Mise à jour des disponibilités (sauvegarde automatique)`,
+            content: base64Content
+        };
+        if (fileSha) {
+            body.sha = fileSha;
+        }
+
+        const putResponse = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${githubToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github+json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (putResponse.status === 409) {
+            // Conflict (SHA mismatch) -> retry merge once immediately
+            console.warn("SHA Conflict detected, retrying save...");
+            return triggerDataSave();
+        }
+
+        if (!putResponse.ok) {
+            const errBody = await putResponse.text();
+            throw new Error(`Code ${putResponse.status}: ${errBody}`);
+        }
+
+        const putResult = await putResponse.json();
+        fileSha = putResult.content.sha; // Save new SHA for next updates
+        
+        updateSyncStatus('saved', 'Enregistré sur GitHub !');
+        
+        // Re-render UI to display final merged state
+        renderApp();
     } catch (error) {
         console.error('Save Error:', error);
-        updateSyncStatus('error', 'Erreur d\'enregistrement (réessayez)');
+        updateSyncStatus('error', 'Erreur d\'enregistrement');
     }
+}
+
+// Merge Local active participant state with Server state
+function mergeDataLists(serverData, localData) {
+    if (!serverData || !Array.isArray(serverData.participants)) {
+        return localData;
+    }
+    
+    // Find active participant's data in our local memory
+    const activeLocal = localData.participants.find(p => p.id === activeParticipantId);
+    if (!activeLocal) {
+        return serverData; // If we don't have an active local user, remote data wins
+    }
+
+    // Merge logic: Map over server participants, replacing our data with our local updates,
+    // and preserving all other participants as they are on the server.
+    const mergedParticipants = serverData.participants.map(p => {
+        if (p.id === activeParticipantId) {
+            return activeLocal;
+        }
+        return p;
+    });
+
+    // If the active local participant does not exist yet on the server list, add them
+    const existsOnServer = serverData.participants.some(p => p.id === activeParticipantId);
+    if (!existsOnServer) {
+        mergedParticipants.push(activeLocal);
+    }
+
+    return { participants: mergedParticipants };
 }
 
 // Update Header status element
@@ -649,7 +854,6 @@ function updateSyncStatus(type, message) {
     } else if (type === 'saved') {
         icon.className = 'fa-solid fa-cloud-arrow-down';
         syncStatusEl.classList.add('saved');
-        // Fade out slightly after some time
         setTimeout(() => {
             if (syncStatusEl.classList.contains('saved')) {
                 syncStatusEl.style.opacity = '0.7';
@@ -670,7 +874,7 @@ function getStatusColor(status) {
     return 'transparent';
 }
 
-// Helper: Custom color for participant avatar based on name hash (nice harmonized palette)
+// Helper: Custom color for participant avatar based on name hash
 function stringToColor(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
