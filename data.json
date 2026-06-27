@@ -60,7 +60,6 @@
         "2026-09-28": "unavailable",
         "2026-09-30": "unavailable",
         "2026-10-01": "unavailable",
-        "2026-10-11": "available",
         "2026-10-10": "available",
         "2026-10-17": "available",
         "2026-10-18": "available",
@@ -70,7 +69,8 @@
         "2026-10-23": "available",
         "2026-10-16": "available",
         "2026-10-09": "available",
-        "2026-10-04": "available"
+        "2026-10-04": "available",
+        "2026-10-11": "maybe"
       }
     },
     {
