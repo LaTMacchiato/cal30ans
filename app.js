@@ -207,6 +207,10 @@ function setupEventListeners() {
             floatingTooltipEl.style.top = `${y}px`;
         }
     });
+
+    // Hide tooltip on click/touchstart (safety for mobile tap/hover simulation)
+    document.addEventListener('click', hideTooltip);
+    document.addEventListener('touchstart', hideTooltip);
 }
 
 // Fetch data from GitHub API (or fallback to static data.json)
@@ -584,7 +588,9 @@ function renderCalendars() {
 
             // Tooltip triggers
             dayCell.addEventListener('mouseenter', () => {
-                showTooltip(dateKey, numLabel.textContent, cfg.name, cfg.year);
+                if (window.matchMedia('(hover: hover)').matches) {
+                    showTooltip(dateKey, numLabel.textContent, cfg.name, cfg.year);
+                }
             });
             dayCell.addEventListener('mouseleave', hideTooltip);
 
