@@ -14,10 +14,7 @@
     {
       "id": "p_1782569886830_erbto",
       "name": "Test",
-      "availabilities": {
-        "2026-08-29": "maybe",
-        "2026-08-30": "maybe"
-      }
+      "availabilities": {}
     }
   ]
 }
