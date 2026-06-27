@@ -5,7 +5,13 @@
       "name": "Toto le normand",
       "availabilities": {
         "2026-08-31": "unavailable",
-        "2026-09-01": "available"
+        "2026-09-01": "unavailable",
+        "2026-09-02": "unavailable",
+        "2026-09-03": "unavailable",
+        "2026-09-04": "unavailable",
+        "2026-09-05": "unavailable",
+        "2026-09-06": "unavailable",
+        "2026-09-07": "unavailable"
       }
     },
     {
