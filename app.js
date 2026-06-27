@@ -418,13 +418,18 @@ function renderParticipantsList() {
         });
 
         item.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
                 <span class="participant-badge" style="background-color: ${stringToColor(p.name)}">${p.name.charAt(0)}</span>
-                <span style="font-weight: 500;">${p.name}</span>
+                <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</span>
             </div>
-            <div class="participant-stats">
-                <span class="stat-dot avail"><i class="fa-solid fa-circle"></i> ${availCount}</span>
-                <span class="stat-dot maybe"><i class="fa-solid fa-circle"></i> ${maybeCount}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="participant-stats" style="font-size: 0.7rem;">
+                    <span class="stat-dot avail"><i class="fa-solid fa-circle"></i> ${availCount}</span>
+                    <span class="stat-dot maybe"><i class="fa-solid fa-circle"></i> ${maybeCount}</span>
+                </div>
+                <button class="delete-participant-btn" title="Supprimer ${p.name}" style="background: none; border: none; color: var(--color-unavail-solid); cursor: pointer; padding: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; border-radius: 4px; transition: background-color var(--transition-fast);">
+                    <i class="fa-solid fa-user-xmark"></i>
+                </button>
             </div>
         `;
         
@@ -436,8 +441,37 @@ function renderParticipantsList() {
             }
         });
 
+        // Add event listener to delete button
+        const deleteBtn = item.querySelector('.delete-participant-btn');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent trigger profile switch
+            handleDeleteParticipant(p.id, p.name);
+        });
+
         participantsListEl.appendChild(item);
     });
+}
+
+// Delete participant and its availabilities
+function handleDeleteParticipant(id, name) {
+    if (!githubToken) {
+        alert("Action impossible : vous devez configurer un Token GitHub pour supprimer un participant.");
+        return;
+    }
+
+    if (confirm(`Voulez-vous vraiment supprimer le profil de "${name}" et toutes ses disponibilités ?`)) {
+        appData.participants = appData.participants.filter(p => p.id !== id);
+        
+        // If the active user was deleted, reset session
+        if (activeParticipantId === id) {
+            activeParticipantId = null;
+            localStorage.removeItem('cal30ans_participant_id');
+            showLoginModal();
+        }
+        
+        renderApp();
+        queueDataSave();
+    }
 }
 
 // Generate calendar cells dynamically
