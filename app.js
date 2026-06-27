@@ -56,9 +56,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     setupEventListeners();
-    await fetchInitialData();
-    checkSavedSession();
+    
+    if (!githubToken) {
+        // Force token config on startup
+        if (closeSettingsBtn) closeSettingsBtn.classList.add('hidden');
+        if (settingsModalEl) settingsModalEl.classList.remove('hidden');
+    } else {
+        await startAppFlow();
+    }
 });
+
+// App flow starting point (once token is set)
+async function startAppFlow() {
+    await fetchInitialData();
+    renderApp(); // Render in background so user sees calendar behind modals
+    checkSavedSession();
+}
 
 // Helper: Determine repo details from URL
 function getRepoDetails() {
@@ -115,6 +128,7 @@ function setupEventListeners() {
 
     // Settings Modal triggers
     settingsBtn.addEventListener('click', () => {
+        if (closeSettingsBtn) closeSettingsBtn.classList.remove('hidden');
         settingsModalEl.classList.remove('hidden');
         if (githubTokenInput) {
             githubTokenInput.value = githubToken;
@@ -127,13 +141,44 @@ function setupEventListeners() {
 
     saveSettingsBtn.addEventListener('click', async () => {
         const tokenVal = githubTokenInput.value.trim();
-        githubToken = tokenVal;
-        localStorage.setItem('cal30ans_github_token', tokenVal);
-        settingsModalEl.classList.add('hidden');
+        if (!tokenVal) {
+            alert("Veuillez saisir un Token GitHub valide pour synchroniser.");
+            return;
+        }
+
+        updateSyncStatus('loading', 'Vérification...');
         
-        // Reload data with new credentials
-        await fetchInitialData();
-        renderApp();
+        try {
+            // Test token validity
+            const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`, {
+                headers: {
+                    'Authorization': `Bearer ${tokenVal}`,
+                    'Accept': 'application/vnd.github+json'
+                }
+            });
+            
+            if (response.status === 401) {
+                alert("Token GitHub invalide ou expiré. Veuillez vérifier votre saisie.");
+                updateSyncStatus('error', 'Token invalide');
+                return;
+            }
+            
+            // If ok or 404 (file not created yet)
+            if (response.ok || response.status === 404) {
+                githubToken = tokenVal;
+                localStorage.setItem('cal30ans_github_token', tokenVal);
+                settingsModalEl.classList.add('hidden');
+                if (closeSettingsBtn) closeSettingsBtn.classList.remove('hidden');
+                
+                await startAppFlow();
+            } else {
+                throw new Error(`Status ${response.status}`);
+            }
+        } catch (e) {
+            console.error("Verification error:", e);
+            alert("Erreur de connexion. Impossible de valider le token. Veuillez réessayer.");
+            updateSyncStatus('error', 'Erreur de connexion');
+        }
     });
 
     // Tooltip floating mouse movements
@@ -168,8 +213,7 @@ async function fetchInitialData() {
             const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`, {
                 headers: {
                     'Authorization': `Bearer ${githubToken}`,
-                    'Accept': 'application/vnd.github+json',
-                    'Cache-Control': 'no-cache'
+                    'Accept': 'application/vnd.github+json'
                 }
             });
 
@@ -732,8 +776,7 @@ async function triggerDataSave() {
         const getResponse = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/data.json`, {
             headers: {
                 'Authorization': `Bearer ${githubToken}`,
-                'Accept': 'application/vnd.github+json',
-                'Cache-Control': 'no-cache'
+                'Accept': 'application/vnd.github+json'
             }
         });
 
