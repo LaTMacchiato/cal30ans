@@ -91,15 +91,6 @@
                     </div>
                 </div>
 
-                <!-- Heatmap Summary / Best Dates -->
-                <div class="card card-analytics">
-                    <h2><i class="fa-solid fa-star text-gold"></i> Meilleures Dates</h2>
-                    <p class="section-desc">Les jours réunissant le plus grand nombre de participants :</p>
-                    <div id="best-dates-container" class="best-dates-list">
-                        <!-- Will be populated dynamically -->
-                        <p class="empty-msg">Renseignez vos disponibilités pour calculer les meilleurs jours !</p>
-                    </div>
-                </div>
             </aside>
 
             <!-- Calendar Area -->
@@ -116,6 +107,17 @@
                 <!-- 4 Months Grid container -->
                 <div class="months-grid" id="months-grid">
                     <!-- Will be populated by JS -->
+                </div>
+
+                <!-- Heatmap Summary / Best Dates (Moved to bottom) -->
+                <div class="best-dates-section">
+                    <hr class="section-divider">
+                    <h2><i class="fa-solid fa-star text-gold"></i> Meilleures Dates</h2>
+                    <p class="section-desc">Les jours réunissant le plus grand nombre de participants :</p>
+                    <div id="best-dates-container" class="best-dates-list">
+                        <!-- Will be populated dynamically -->
+                        <p class="empty-msg">Renseignez vos disponibilités pour calculer les meilleurs jours !</p>
+                    </div>
                 </div>
             </section>
         </main>

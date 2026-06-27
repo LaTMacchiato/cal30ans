@@ -457,11 +457,21 @@ h2 {
     color: var(--accent-gold);
 }
 
-/* Best Dates Card */
+/* Best Dates Section (moved to bottom) */
+.best-dates-section {
+    margin-top: 24px;
+}
+
+.section-divider {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
 .best-dates-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
 }
 
 .best-date-item {
