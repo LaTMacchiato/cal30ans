@@ -212,7 +212,6 @@
       "name": "Thomas",
       "availabilities": {
         "2026-08-22": "unavailable",
-        "2026-08-23": "available",
         "2026-09-12": "available",
         "2026-09-13": "available",
         "2026-09-05": "maybe",
@@ -226,7 +225,8 @@
         "2026-08-30": "maybe",
         "2026-08-28": "maybe",
         "2026-08-15": "unavailable",
-        "2026-08-16": "unavailable"
+        "2026-08-16": "unavailable",
+        "2026-08-23": "unavailable"
       }
     }
   ]
